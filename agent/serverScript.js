@@ -12,10 +12,19 @@ async function sendHeartbeat() {
         'Authorization': `Bearer ${SERVER_TOKEN}`,
       },
       body: JSON.stringify({
-        status: 'online',
-        id: SERVER_ID,
-        metrics: {}
+        'status': 'online',
+        'id': SERVER_ID,
+        'metrics': {}
       })
-    })
+    });
+
+    if (!res.ok) {
+      console.error('Heartbeat rejected:', res.status, await res.text());
+    };
+  } catch (err) {
+    console.log("Failed to Heartbeat:", err.message)
   }
 }
+
+sendHeartbeat()
+setInterval(sendHeartbeat, INTERVAL_MS)
