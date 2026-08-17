@@ -9,8 +9,8 @@ const heartbeat = require("./api/heartbeat");
 const status = require("./api/status");
 //const servers = require("./api/servers");
 
-app.use("/", status);
-app.use("/heartbeat", heartbeat);
+app.use("/status/", status);
+app.use("/status/heartbeat", heartbeat);
 //app.use("/status/servers", servers);
 
 app.listen(PORT, '0.0.0.0', () => {
