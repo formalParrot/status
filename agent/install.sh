@@ -54,8 +54,8 @@ SERVER_TOKEN="__SERVER_TOKEN__"
 HEARTBEAT_URL="__HEARTBEAT_URL__"
 INSTALL_COMPLETE_URL="__INSTALL_COMPLETE_URL__"
 
-if [[ "$SERVER_ID" == "__SERVER_ID__" || "$SERVER_TOKEN" == "__SERVER_TOKEN__" ||
-    "$HEARTBEAT_URL" == "__HEARTBEAT_URL__" || "$INSTALL_COMPLETE_URL" == "__INSTALL_COMPLETE_URL__" ]]; then
+if [[ -z "$SERVER_ID" || -z "$SERVER_TOKEN" ||
+    -z "$HEARTBEAT_URL" || -z "$INSTALL_COMPLETE_URL" ]]; then
     echo "Installer configuration is missing or invalid."
     exit 1
 fi
@@ -70,7 +70,7 @@ HEARTBEAT_URL="$HEARTBEAT_URL"
 
 while true; do
     curl -fsS --max-time 15 "\$HEARTBEAT_URL" \
-        -H "Authorization: Bearer \$SERVER_TOKEN" \
+        --oauth2-bearer "\$SERVER_TOKEN" \
         -H "Content-Type: application/json" \
         --data "{\"id\":\$SERVER_ID,\"status\":\"online\",\"metrics\":{}}" \
         >/dev/null || true
