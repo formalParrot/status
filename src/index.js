@@ -22,7 +22,11 @@ app.get("/install.sh/:token", (req, res) => {
         .replaceAll("__SERVER_TOKEN__", install.server_token)
         .replaceAll("__HEARTBEAT_URL__", heartbeatUrl);
 
-    res.type("text/plain").send(script);
+    if (script.includes("__SERVER_ID__") || script.includes("__SERVER_TOKEN__") || script.includes("__HEARTBEAT_URL__")) {
+        return res.status(500).type("text/plain").send("Installer configuration generation failed.\n");
+    }
+
+    res.set("Cache-Control", "no-store").type("text/plain").send(script);
 });
 
 const heartbeat = require("./api/heartbeat");

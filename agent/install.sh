@@ -10,6 +10,35 @@ fi
 APP_DIR="/etc/parrot-status"
 BASE_URL="https://raw.githubusercontent.com/formalParrot/status/refs/heads/main"
 
+cat > /usr/local/bin/parrot-status <<'EOF'
+#!/bin/bash
+set -e
+
+if [ "$EUID" -ne 0 ]; then
+    echo "Please run this command as root: sudo parrot-status uninstall"
+    exit 1
+fi
+
+case "${1:-}" in
+    uninstall)
+        PM2_USER="${SUDO_USER:-}"
+        if [ -n "$PM2_USER" ] && [ "$PM2_USER" != "root" ] && id "$PM2_USER" >/dev/null 2>&1; then
+            PM2_HOME="$(getent passwd "$PM2_USER" | cut -d: -f6)/.pm2"
+            runuser -u "$PM2_USER" -- env PM2_HOME="$PM2_HOME" pm2 delete parrot-status >/dev/null 2>&1 || true
+            runuser -u "$PM2_USER" -- env PM2_HOME="$PM2_HOME" pm2 save >/dev/null 2>&1 || true
+        fi
+        rm -rf "$APP_DIR"
+        rm -f /usr/local/bin/parrot-status
+        echo "Parrot Status uninstalled."
+        ;;
+    *)
+        echo "Usage: sudo parrot-status uninstall"
+        exit 1
+        ;;
+esac
+EOF
+chmod 755 /usr/local/bin/parrot-status
+
 echo "Checking for Node.js..."
 
 if ! command -v node >/dev/null 2>&1; then
