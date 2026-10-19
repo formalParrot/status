@@ -52,8 +52,10 @@ echo "Configuring heartbeat agent"
 SERVER_ID="__SERVER_ID__"
 SERVER_TOKEN="__SERVER_TOKEN__"
 HEARTBEAT_URL="__HEARTBEAT_URL__"
+INSTALL_COMPLETE_URL="__INSTALL_COMPLETE_URL__"
 
-if [[ "$SERVER_ID" == "__SERVER_ID__" || "$SERVER_TOKEN" == "__SERVER_TOKEN__" || "$HEARTBEAT_URL" == "__HEARTBEAT_URL__" ]]; then
+if [[ "$SERVER_ID" == "__SERVER_ID__" || "$SERVER_TOKEN" == "__SERVER_TOKEN__" ||
+    "$HEARTBEAT_URL" == "__HEARTBEAT_URL__" || "$INSTALL_COMPLETE_URL" == "__INSTALL_COMPLETE_URL__" ]]; then
     echo "Installer token data is missing or invalid."
     exit 1
 fi
@@ -150,6 +152,7 @@ chmod 755 /usr/local/bin/parrot-status
 
 echo
 echo "PM2 setup complete."
+curl -fsS -X POST "$INSTALL_COMPLETE_URL" >/dev/null
 echo "Uninstall with: sudo parrot-status uninstall"
 echo
 echo "Installed."

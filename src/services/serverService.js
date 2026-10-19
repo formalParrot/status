@@ -86,27 +86,26 @@ function createServer(name) {
   return { id, name, rawToken, installToken, installTokenExpiresAt: now + INSTALL_TOKEN_TTL_MS }
 }
 
-function consumeInstallToken(token) {
+function getInstallToken(token) {
   const now = Date.now();
   const tokenHash = hashToken(token);
 
-  const transaction = db.transaction(() => {
-    const install = db.prepare(`
-      SELECT server_id, server_token
-      FROM install_tokens
-      WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?
-    `).get(tokenHash, now);
+  return db.prepare(`
+    SELECT server_id, server_token
+    FROM install_tokens
+    WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?
+  `).get(tokenHash, now);
+}
 
-    if (!install) return undefined;
+function completeInstallToken(token) {
+  const tokenHash = hashToken(token);
+  const result = db.prepare(`
+    UPDATE install_tokens
+    SET used_at = ?
+    WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?
+  `).run(Date.now(), tokenHash, Date.now());
 
-    db.prepare(`
-      UPDATE install_tokens SET used_at = ? WHERE token_hash = ?
-    `).run(now, tokenHash);
-
-    return install;
-  });
-
-  return transaction();
+  return result.changes > 0;
 }
 
 function getServers() {
@@ -156,5 +155,6 @@ module.exports = {
   recordHeartbeat,
   getDailyUptime,
   deleteServerById,
-  consumeInstallToken
+  getInstallToken,
+  completeInstallToken
 }
