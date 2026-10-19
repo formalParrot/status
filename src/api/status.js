@@ -6,7 +6,8 @@ const {
   getServers,
   findServerById,
   findServerByTokenHash,
-  getDailyUptime
+  getDailyUptime,
+  deleteServerById
 } = require("../services/serverService")
 
 router.get("/servers", (req, res) => {
@@ -24,6 +25,12 @@ router.get("/servers/:id", (req, res) => {
 router.get("/servers/:id/uptime", (req, res) => {
   res.json(getDailyUptime(req.params.id))
 })
+
+router.delete("/servers/:id", (req, res) => {
+  const changes = deleteServerById(req.params.id);
+  if (!changes) return res.status(404).json({ error: "Server not found" });
+  res.status(204).end();
+});
 
 router.post("/servers", (req, res) => {
   const { name } = req.body;

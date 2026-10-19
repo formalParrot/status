@@ -41,6 +41,21 @@ echo "Installing dependencies"
 npm install dotenv
 
 echo
+echo "Configuring heartbeat agent"
+echo "SERVER_ID is the numeric id shown in the status API (e.g. 1)."
+read -r -p "SERVER_ID: " SERVER_ID
+read -r -p "SERVER_TOKEN: " SERVER_TOKEN
+read -r -p "HEARTBEAT_URL: " HEARTBEAT_URL
+
+cat > "$APP_DIR/.env" <<EOF
+SERVER_ID=$SERVER_ID
+SERVER_TOKEN=$SERVER_TOKEN
+HEARTBEAT_URL=$HEARTBEAT_URL
+EOF
+
+chmod 600 "$APP_DIR/.env"
+
+echo
 read -r -p "Would you like to install and configure auto-boot using PM2? [Y/n] " USE_PM2
 
 if [[ -z "$USE_PM2" || "$USE_PM2" =~ ^[Yy]$ ]]; then
@@ -50,6 +65,9 @@ if [[ -z "$USE_PM2" || "$USE_PM2" =~ ^[Yy]$ ]]; then
         echo "User '$PM2_USER' does not exist."
         exit 1
     fi
+
+    echo "Granting $PM2_USER access to the agent config..."
+    chown "$PM2_USER" "$APP_DIR/.env"
 
     echo "Installing PM2..."
     npm install -g pm2

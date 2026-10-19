@@ -98,7 +98,19 @@ function findServerByTokenHash(tokenhash) {
   `).get(tokenhash);
 };
 
-function deleteServerById() { }
+function deleteServerById(id) {
+  const transaction = db.transaction((serverId) => {
+    db.prepare(`
+      DELETE FROM heartbeat_log WHERE server_id = ?
+    `).run(serverId);
+
+    return db.prepare(`
+      DELETE FROM servers WHERE id = ?
+    `).run(serverId).changes;
+  });
+
+  return transaction(id);
+}
 
 module.exports = {
   createServer,
@@ -106,5 +118,6 @@ module.exports = {
   findServerById,
   findServerByTokenHash,
   recordHeartbeat,
-  getDailyUptime
+  getDailyUptime,
+  deleteServerById
 }
