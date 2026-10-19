@@ -55,44 +55,67 @@ EOF
 chmod 600 "$APP_DIR/.env"
 
 echo
-read -r -p "Would you like to install and configure auto-boot using PM2? [y/N] " USE_PM2
-
-if [[ "$USE_PM2" =~ ^[Yy]$ ]]; then
-    read -r -p "Which user should run Parrot Status? " PM2_USER
-
-    if [[ -z "$PM2_USER" ]]; then
-        echo "No user selected; skipping PM2 setup."
-    elif ! id "$PM2_USER" >/dev/null 2>&1; then
-        echo "User '$PM2_USER' does not exist."
-        exit 1
-    else
-        echo "Granting $PM2_USER access to the agent config..."
-        chown "$PM2_USER" "$APP_DIR/.env"
-
-        echo "Installing PM2..."
-        npm install -g pm2
-
-        echo "Starting agent as $PM2_USER..."
-        runuser -u "$PM2_USER" -- pm2 start "$APP_DIR/agent.js" --name parrot-status
-
-        echo "Saving PM2 process..."
-        runuser -u "$PM2_USER" -- pm2 save
-
-        echo "Configuring PM2 startup..."
-
-        PM2_HOME="$(getent passwd "$PM2_USER" | cut -d: -f6)/.pm2"
-
-        env PATH="$PATH:/usr/bin" pm2 startup systemd \
-            -u "$PM2_USER" \
-            --hp "$(getent passwd "$PM2_USER" | cut -d: -f6)"
-
-        echo
-        echo "PM2 setup complete."
-    fi
-else
-    echo
-    echo "PM2 setup skipped."
+DEFAULT_PM2_USER="${SUDO_USER:-}"
+if [[ -z "$DEFAULT_PM2_USER" || "$DEFAULT_PM2_USER" == "root" ]]; then
+    DEFAULT_PM2_USER="$(id -un)"
 fi
 
+read -r -p "Which user should run Parrot Status? [$DEFAULT_PM2_USER] " PM2_USER
+PM2_USER="${PM2_USER:-$DEFAULT_PM2_USER}"
+
+if ! id "$PM2_USER" >/dev/null 2>&1 || [[ "$PM2_USER" == "root" ]]; then
+    echo "User '$PM2_USER' does not exist or cannot be root."
+    exit 1
+fi
+
+PM2_HOME="$(getent passwd "$PM2_USER" | cut -d: -f6)/.pm2"
+
+echo "Granting $PM2_USER access to the agent config..."
+chown "$PM2_USER" "$APP_DIR/.env"
+
+echo "Installing PM2..."
+npm install -g pm2
+
+echo "Starting agent as $PM2_USER..."
+runuser -u "$PM2_USER" -- env PM2_HOME="$PM2_HOME" pm2 delete parrot-status >/dev/null 2>&1 || true
+runuser -u "$PM2_USER" -- env PM2_HOME="$PM2_HOME" pm2 start "$APP_DIR/agent.js" --name parrot-status
+
+echo "Saving PM2 process..."
+runuser -u "$PM2_USER" -- env PM2_HOME="$PM2_HOME" pm2 save
+
+echo "Configuring PM2 startup..."
+env PATH="$PATH:/usr/bin" pm2 startup systemd \
+    -u "$PM2_USER" \
+    --hp "$(getent passwd "$PM2_USER" | cut -d: -f6)"
+
+cat > /usr/local/bin/parrot-status <<EOF
+#!/bin/bash
+set -e
+
+if [ "\$EUID" -ne 0 ]; then
+    echo "Please run this command as root: sudo parrot-status uninstall"
+    exit 1
+fi
+
+case "\${1:-}" in
+    uninstall)
+        echo "Stopping Parrot Status..."
+        runuser -u "$PM2_USER" -- env PM2_HOME="$PM2_HOME" pm2 delete parrot-status >/dev/null 2>&1 || true
+        runuser -u "$PM2_USER" -- env PM2_HOME="$PM2_HOME" pm2 save >/dev/null 2>&1 || true
+        rm -rf "$APP_DIR"
+        rm -f /usr/local/bin/parrot-status
+        echo "Parrot Status uninstalled."
+        ;;
+    *)
+        echo "Usage: sudo parrot-status uninstall"
+        exit 1
+        ;;
+esac
+EOF
+chmod 755 /usr/local/bin/parrot-status
+
+echo
+echo "PM2 setup complete."
+echo "Uninstall with: sudo parrot-status uninstall"
 echo
 echo "Installed."
