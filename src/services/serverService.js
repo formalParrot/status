@@ -4,6 +4,7 @@ const db = require("../db/database");
 const OFFLINE_THRESHOLD = 90_000; // 90 seconds
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const DAY_MS = 86_400_400;
+const INSTALL_TOKEN_TTL_MS = 24 * 60 * 60 * 1_000;
 
 function toPublic(server) {
   const offline = Date.now() - server.last_heartbeat > OFFLINE_THRESHOLD;
@@ -64,13 +65,48 @@ function getDailyUptime(serverId, days = 60) {
 function createServer(name) {
   const rawToken = generateToken()
   const tokenHash = hashToken(rawToken)
+  const installToken = generateToken()
+  const now = Date.now();
 
-  db.prepare(`
-    INSERT INTO servers (name, token_hash, created_at)
-    VALUES (?, ?, ?)
-  `).run(name, tokenHash, Date.now());
+  const transaction = db.transaction(() => {
+    const result = db.prepare(`
+      INSERT INTO servers (name, token_hash, created_at)
+      VALUES (?, ?, ?)
+    `).run(name, tokenHash, now);
 
-  return { name, rawToken }
+    db.prepare(`
+      INSERT INTO install_tokens (token_hash, server_id, server_token, expires_at)
+      VALUES (?, ?, ?, ?)
+    `).run(hashToken(installToken), result.lastInsertRowid, rawToken, now + INSTALL_TOKEN_TTL_MS);
+
+    return result.lastInsertRowid;
+  });
+
+  const id = transaction();
+  return { id, name, rawToken, installToken, installTokenExpiresAt: now + INSTALL_TOKEN_TTL_MS }
+}
+
+function consumeInstallToken(token) {
+  const now = Date.now();
+  const tokenHash = hashToken(token);
+
+  const transaction = db.transaction(() => {
+    const install = db.prepare(`
+      SELECT server_id, server_token
+      FROM install_tokens
+      WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?
+    `).get(tokenHash, now);
+
+    if (!install) return undefined;
+
+    db.prepare(`
+      UPDATE install_tokens SET used_at = ? WHERE token_hash = ?
+    `).run(now, tokenHash);
+
+    return install;
+  });
+
+  return transaction();
 }
 
 function getServers() {
@@ -119,5 +155,6 @@ module.exports = {
   findServerByTokenHash,
   recordHeartbeat,
   getDailyUptime,
-  deleteServerById
+  deleteServerById,
+  consumeInstallToken
 }

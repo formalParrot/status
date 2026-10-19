@@ -12,7 +12,6 @@ const {
 
 router.get("/servers", (req, res) => {
   const data = getServers()
-
   res.json(data)
 });
 
@@ -41,7 +40,14 @@ router.post("/servers", (req, res) => {
   
   const data = createServer(name)
 
-  res.json(data)
+  const publicUrl = `${req.protocol}://${req.get("host")}`;
+  res.json({
+    id: data.id,
+    name: data.name,
+    rawToken: data.rawToken,
+    installUrl: `${publicUrl}/install.sh/${data.installToken}`,
+    installTokenExpiresAt: data.installTokenExpiresAt
+  })
 });
 
 module.exports = router;

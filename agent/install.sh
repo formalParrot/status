@@ -3,7 +3,7 @@ set -e
 
 if [ "$EUID" -ne 0 ]; then
     echo "Please run this installer as root."
-    echo "  curl -fsSL https://your-url/install.sh | sudo bash"
+    echo "  Use the one-time installer URL returned when creating a server."
     exit 1
 fi
 
@@ -42,10 +42,9 @@ npm install dotenv
 
 echo
 echo "Configuring heartbeat agent"
-echo "SERVER_ID is the numeric id shown in the status API (e.g. 1)."
-read -r -p "SERVER_ID: " SERVER_ID
-read -r -p "SERVER_TOKEN: " SERVER_TOKEN
-read -r -p "HEARTBEAT_URL: " HEARTBEAT_URL
+SERVER_ID="__SERVER_ID__"
+SERVER_TOKEN="__SERVER_TOKEN__"
+HEARTBEAT_URL="__HEARTBEAT_URL__"
 
 cat > "$APP_DIR/.env" <<EOF
 SERVER_ID=$SERVER_ID
@@ -56,38 +55,40 @@ EOF
 chmod 600 "$APP_DIR/.env"
 
 echo
-read -r -p "Would you like to install and configure auto-boot using PM2? [Y/n] " USE_PM2
+read -r -p "Would you like to install and configure auto-boot using PM2? [y/N] " USE_PM2
 
-if [[ -z "$USE_PM2" || "$USE_PM2" =~ ^[Yy]$ ]]; then
+if [[ "$USE_PM2" =~ ^[Yy]$ ]]; then
     read -r -p "Which user should run Parrot Status? " PM2_USER
 
-    if ! id "$PM2_USER" >/dev/null 2>&1; then
+    if [[ -z "$PM2_USER" ]]; then
+        echo "No user selected; skipping PM2 setup."
+    elif ! id "$PM2_USER" >/dev/null 2>&1; then
         echo "User '$PM2_USER' does not exist."
         exit 1
+    else
+        echo "Granting $PM2_USER access to the agent config..."
+        chown "$PM2_USER" "$APP_DIR/.env"
+
+        echo "Installing PM2..."
+        npm install -g pm2
+
+        echo "Starting agent as $PM2_USER..."
+        runuser -u "$PM2_USER" -- pm2 start "$APP_DIR/agent.js" --name parrot-status
+
+        echo "Saving PM2 process..."
+        runuser -u "$PM2_USER" -- pm2 save
+
+        echo "Configuring PM2 startup..."
+
+        PM2_HOME="$(getent passwd "$PM2_USER" | cut -d: -f6)/.pm2"
+
+        env PATH="$PATH:/usr/bin" pm2 startup systemd \
+            -u "$PM2_USER" \
+            --hp "$(getent passwd "$PM2_USER" | cut -d: -f6)"
+
+        echo
+        echo "PM2 setup complete."
     fi
-
-    echo "Granting $PM2_USER access to the agent config..."
-    chown "$PM2_USER" "$APP_DIR/.env"
-
-    echo "Installing PM2..."
-    npm install -g pm2
-
-    echo "Starting agent as $PM2_USER..."
-    runuser -u "$PM2_USER" -- pm2 start "$APP_DIR/agent.js" --name parrot-status
-
-    echo "Saving PM2 process..."
-    runuser -u "$PM2_USER" -- pm2 save
-
-    echo "Configuring PM2 startup..."
-
-    PM2_HOME="$(getent passwd "$PM2_USER" | cut -d: -f6)/.pm2"
-
-    env PATH="$PATH:/usr/bin" pm2 startup systemd \
-        -u "$PM2_USER" \
-        --hp "$(getent passwd "$PM2_USER" | cut -d: -f6)"
-
-    echo
-    echo "PM2 setup complete."
 else
     echo
     echo "PM2 setup skipped."
