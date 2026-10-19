@@ -46,6 +46,11 @@ SERVER_ID="__SERVER_ID__"
 SERVER_TOKEN="__SERVER_TOKEN__"
 HEARTBEAT_URL="__HEARTBEAT_URL__"
 
+if [[ "$SERVER_ID" == "__SERVER_ID__" || "$SERVER_TOKEN" == "__SERVER_TOKEN__" || "$HEARTBEAT_URL" == "__HEARTBEAT_URL__" ]]; then
+    echo "Installer token data is missing or invalid."
+    exit 1
+fi
+
 cat > "$APP_DIR/.env" <<EOF
 SERVER_ID=$SERVER_ID
 SERVER_TOKEN=$SERVER_TOKEN
@@ -55,13 +60,11 @@ EOF
 chmod 600 "$APP_DIR/.env"
 
 echo
-DEFAULT_PM2_USER="${SUDO_USER:-}"
-if [[ -z "$DEFAULT_PM2_USER" || "$DEFAULT_PM2_USER" == "root" ]]; then
-    DEFAULT_PM2_USER="$(id -un)"
+PM2_USER="${SUDO_USER:-}"
+if [[ -z "$PM2_USER" || "$PM2_USER" == "root" ]]; then
+    echo "SUDO_USER is not set. Run this installer with sudo from the account that should run Parrot Status."
+    exit 1
 fi
-
-read -r -p "Which user should run Parrot Status? [$DEFAULT_PM2_USER] " PM2_USER
-PM2_USER="${PM2_USER:-$DEFAULT_PM2_USER}"
 
 if ! id "$PM2_USER" >/dev/null 2>&1 || [[ "$PM2_USER" == "root" ]]; then
     echo "User '$PM2_USER' does not exist or cannot be root."
