@@ -6,8 +6,13 @@ const { consumeInstallToken } = require("./services/serverService");
 const app = express();
 const PORT = process.env.PORT || 2552;
 const PUBLIC_URL = (process.env.PUBLIC_URL || "https://status.justparrot.me").replace(/\/$/, "");
+const INSTALLER_VERSION = "2026-10-19-shell-agent-v2";
 
 app.use(express.json());
+
+app.get("/install.sh/health", (req, res) => {
+    res.set("Cache-Control", "no-store").json({ installerVersion: INSTALLER_VERSION });
+});
 
 app.get("/install.sh/:token", (req, res) => {
     const install = consumeInstallToken(req.params.token);
@@ -26,7 +31,10 @@ app.get("/install.sh/:token", (req, res) => {
         return res.status(500).type("text/plain").send("Installer configuration generation failed.\n");
     }
 
-    res.set("Cache-Control", "no-store").type("text/plain").send(script);
+    res.set("X-Installer-Version", INSTALLER_VERSION)
+        .set("Cache-Control", "no-store")
+        .type("text/plain")
+        .send(script);
 });
 
 const heartbeat = require("./api/heartbeat");
