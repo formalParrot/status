@@ -6,7 +6,7 @@ const { getInstallToken, completeInstallToken } = require("./services/serverServ
 const app = express();
 const PORT = process.env.PORT || 2552;
 const PUBLIC_URL = (process.env.PUBLIC_URL || "https://status.justparrot.me").replace(/\/$/, "");
-const INSTALLER_VERSION = "2026-10-19-shell-agent-v2";
+const INSTALLER_VERSION = "2026-10-19-shell-agent-v3";
 
 app.use(express.json());
 
@@ -33,12 +33,10 @@ app.get("/install.sh/:token", (req, res) => {
         .replaceAll("__SERVER_ID__", String(install.server_id))
         .replaceAll("__SERVER_TOKEN__", install.server_token)
         .replaceAll("__HEARTBEAT_URL__", heartbeatUrl)
-        .replaceAll("__INSTALL_TOKEN__", req.params.token)
         .replaceAll("__INSTALL_COMPLETE_URL__", `${PUBLIC_URL}/install.sh/${req.params.token}/complete`);
 
     if (script.includes("__SERVER_ID__") || script.includes("__SERVER_TOKEN__") ||
-        script.includes("__HEARTBEAT_URL__") || script.includes("__INSTALL_TOKEN__") ||
-        script.includes("__INSTALL_COMPLETE_URL__")) {
+        script.includes("__HEARTBEAT_URL__") || script.includes("__INSTALL_COMPLETE_URL__")) {
         return res.status(500).type("text/plain").send("Installer configuration generation failed.\n");
     }
 

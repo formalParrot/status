@@ -56,17 +56,9 @@ INSTALL_COMPLETE_URL="__INSTALL_COMPLETE_URL__"
 
 if [[ "$SERVER_ID" == "__SERVER_ID__" || "$SERVER_TOKEN" == "__SERVER_TOKEN__" ||
     "$HEARTBEAT_URL" == "__HEARTBEAT_URL__" || "$INSTALL_COMPLETE_URL" == "__INSTALL_COMPLETE_URL__" ]]; then
-    echo "Installer token data is missing or invalid."
+    echo "Installer configuration is missing or invalid."
     exit 1
 fi
-
-cat > "$APP_DIR/.env" <<EOF
-SERVER_ID=$SERVER_ID
-SERVER_TOKEN=$SERVER_TOKEN
-HEARTBEAT_URL=$HEARTBEAT_URL
-EOF
-
-chmod 600 "$APP_DIR/.env"
 
 cat > "$APP_DIR/agent.sh" <<EOF
 #!/bin/bash
@@ -101,8 +93,8 @@ fi
 
 PM2_HOME="$(getent passwd "$PM2_USER" | cut -d: -f6)/.pm2"
 
-echo "Granting $PM2_USER access to the agent config..."
-chown "$PM2_USER" "$APP_DIR/.env"
+echo "Granting $PM2_USER access to the agent..."
+chown "$PM2_USER" "$APP_DIR/agent.sh"
 
 echo "Installing PM2..."
 if ! command -v npm >/dev/null 2>&1; then
