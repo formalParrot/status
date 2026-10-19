@@ -5,6 +5,7 @@ const { consumeInstallToken } = require("./services/serverService");
 
 const app = express();
 const PORT = process.env.PORT || 2552;
+const PUBLIC_URL = (process.env.PUBLIC_URL || "https://status.justparrot.me").replace(/\/$/, "");
 
 app.use(express.json());
 
@@ -15,7 +16,7 @@ app.get("/install.sh/:token", (req, res) => {
     }
 
     const template = fs.readFileSync(path.join(__dirname, "../agent/install.sh"), "utf8");
-    const heartbeatUrl = `${req.protocol}://${req.get("host")}/heartbeat`;
+    const heartbeatUrl = `${PUBLIC_URL}/heartbeat`;
     const script = template
         .replaceAll("__SERVER_ID__", String(install.server_id))
         .replaceAll("__SERVER_TOKEN__", install.server_token)

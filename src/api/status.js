@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const PUBLIC_URL = (process.env.PUBLIC_URL || "https://status.justparrot.me").replace(/\/$/, "");
 
 const {
   createServer,
@@ -40,12 +41,12 @@ router.post("/servers", (req, res) => {
   
   const data = createServer(name)
 
-  const publicUrl = `${req.protocol}://${req.get("host")}`;
+  const installUrl = `${PUBLIC_URL}/install.sh/${data.installToken}`;
   res.json({
     id: data.id,
     name: data.name,
     rawToken: data.rawToken,
-    installUrl: `${publicUrl}/install.sh/${data.installToken}`,
+    installCommand: `curl -fsSL '${installUrl}' | sudo bash`,
     installTokenExpiresAt: data.installTokenExpiresAt
   })
 });
