@@ -8,7 +8,6 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 APP_DIR="/etc/parrot-status"
-BASE_URL="https://raw.githubusercontent.com/formalParrot/status/refs/heads/main"
 
 cat > /usr/local/bin/parrot-status <<'EOF'
 #!/bin/bash
@@ -27,7 +26,7 @@ case "${1:-}" in
             runuser -u "$PM2_USER" -- env PM2_HOME="$PM2_HOME" pm2 delete parrot-status >/dev/null 2>&1 || true
             runuser -u "$PM2_USER" -- env PM2_HOME="$PM2_HOME" pm2 save >/dev/null 2>&1 || true
         fi
-        rm -rf "$APP_DIR"
+        rm -rf /etc/parrot-status
         rm -f /usr/local/bin/parrot-status
         echo "Parrot Status uninstalled."
         ;;
@@ -39,35 +38,14 @@ esac
 EOF
 chmod 755 /usr/local/bin/parrot-status
 
-echo "Checking for Node.js..."
-
-if ! command -v node >/dev/null 2>&1; then
-    echo "Node.js is not installed. Installing..."
-
-    sudo apt update
-    sudo apt install -y nodejs npm
-else
-    echo "Node.js is already installed: $(node --version)"
+echo "Checking for curl..."
+if ! command -v curl >/dev/null 2>&1; then
+    apt update
+    apt install -y curl
 fi
-
-if ! command -v npm >/dev/null 2>&1; then
-    echo "npm is missing. Installing..."
-    sudo apt install -y npm
-fi
-
-echo "Node.js: $(node --version)"
-echo "npm: $(npm --version)"
 
 echo "Creating $APP_DIR"
 mkdir -p "$APP_DIR"
-
-echo "Downloading server script"
-curl -fsSL "$BASE_URL/agent/serverScript.js" -o "$APP_DIR/agent.js"
-
-cd "$APP_DIR"
-
-echo "Installing dependencies"
-npm install dotenv
 
 echo
 echo "Configuring heartbeat agent"
@@ -88,6 +66,25 @@ EOF
 
 chmod 600 "$APP_DIR/.env"
 
+cat > "$APP_DIR/agent.sh" <<EOF
+#!/bin/bash
+set -u
+
+SERVER_ID="$SERVER_ID"
+SERVER_TOKEN="$SERVER_TOKEN"
+HEARTBEAT_URL="$HEARTBEAT_URL"
+
+while true; do
+    curl -fsS --max-time 15 "\$HEARTBEAT_URL" \
+        -H "Authorization: Bearer \$SERVER_TOKEN" \
+        -H "Content-Type: application/json" \
+        --data "{\"id\":\$SERVER_ID,\"status\":\"online\",\"metrics\":{}}" \
+        >/dev/null || true
+    sleep 30
+done
+EOF
+chmod 755 "$APP_DIR/agent.sh"
+
 echo
 PM2_USER="${SUDO_USER:-}"
 if [[ -z "$PM2_USER" || "$PM2_USER" == "root" ]]; then
@@ -106,11 +103,16 @@ echo "Granting $PM2_USER access to the agent config..."
 chown "$PM2_USER" "$APP_DIR/.env"
 
 echo "Installing PM2..."
+if ! command -v npm >/dev/null 2>&1; then
+    echo "npm is not installed. Installing Node.js and npm for PM2..."
+    apt update
+    apt install -y nodejs npm
+fi
 npm install -g pm2
 
 echo "Starting agent as $PM2_USER..."
 runuser -u "$PM2_USER" -- env PM2_HOME="$PM2_HOME" pm2 delete parrot-status >/dev/null 2>&1 || true
-runuser -u "$PM2_USER" -- env PM2_HOME="$PM2_HOME" pm2 start "$APP_DIR/agent.js" --name parrot-status
+runuser -u "$PM2_USER" -- env PM2_HOME="$PM2_HOME" pm2 start "$APP_DIR/agent.sh" --name parrot-status --interpreter bash
 
 echo "Saving PM2 process..."
 runuser -u "$PM2_USER" -- env PM2_HOME="$PM2_HOME" pm2 save
