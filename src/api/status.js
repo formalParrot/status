@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const authenticateAdmin = require("../middleware/authenticateAdmin");
 const PUBLIC_URL = (process.env.PUBLIC_URL || "https://status.justparrot.me").replace(/\/$/, "");
 
 const {
@@ -27,7 +28,7 @@ router.get("/servers/:id/uptime", (req, res) => {
   res.json(getDailyUptime(req.params.id))
 })
 
-router.post("/servers/:id/reset-uptime", (req, res) => {
+router.post("/servers/:id/reset-uptime", authenticateAdmin, (req, res) => {
   const resetAt = resetUptime(req.params.id);
   if (!resetAt) {
     return res.status(404).json({ error: "Server not found" });
@@ -35,13 +36,13 @@ router.post("/servers/:id/reset-uptime", (req, res) => {
   res.json({ id: Number(req.params.id), uptimeResetAt: resetAt });
 });
 
-router.delete("/servers/:id", (req, res) => {
+router.delete("/servers/:id", authenticateAdmin, (req, res) => {
   const changes = deleteServerById(req.params.id);
   if (!changes) return res.status(404).json({ error: "Server not found" });
   res.status(204).end();
 });
 
-router.post("/servers", (req, res) => {
+router.post("/servers", authenticateAdmin, (req, res) => {
   const { name } = req.body;
 
   if (!name) {

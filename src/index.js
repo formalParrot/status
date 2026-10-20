@@ -1,6 +1,7 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "../.env") });
 const { getInstallToken, completeInstallToken } = require("./services/serverService");
 
 const app = express();
@@ -9,6 +10,7 @@ const PUBLIC_URL = (process.env.PUBLIC_URL || "https://status.justparrot.me").re
 const INSTALLER_VERSION = "2026-10-19-shell-agent-v3";
 
 app.use(express.json());
+app.use(express.static(path.join(__dirname, "../public"), { index: "index.html" }));
 
 app.get("/install.sh/health", (req, res) => {
     res.set("Cache-Control", "no-store").json({ installerVersion: INSTALLER_VERSION });

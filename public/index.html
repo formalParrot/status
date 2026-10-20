@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Parrot Status</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+    :root {
+      --ink: #e9f0ed;
+      --muted: #8d9b96;
+      --line: #263631;
+      --panel: #101a17;
+      --canvas: #08100e;
+      --green: #9cffbd;
+      --amber: #f7c873;
+      --red: #ff827d;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--canvas);
+      font-family: "Space Grotesk", system-ui, sans-serif;
+    }
+    main { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 42px 0 64px; }
+    header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 36px; }
+    .brand { display: flex; align-items: center; gap: 13px; }
+    .mark { width: 14px; height: 14px; background: var(--green); box-shadow: 0 0 24px var(--green); transform: rotate(45deg); }
+    h1 { margin: 0; font-size: clamp(2rem, 4vw, 3.6rem); letter-spacing: -.07em; line-height: .95; }
+    .subhead { margin: 10px 0 0 27px; color: var(--muted); font-size: .9rem; }
+    .refresh { color: var(--muted); font: 12px "DM Mono", monospace; text-align: right; }
+    .refresh strong { display: block; color: var(--green); font-weight: 400; margin-top: 6px; }
+    .summary { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); border-block: 1px solid var(--line); margin-bottom: 30px; }
+    .stat { padding: 23px 24px 25px; border-left: 1px solid var(--line); }
+    .stat:first-child { border-left: 0; }
+    .stat small { display: block; color: var(--muted); font: 11px "DM Mono", monospace; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 13px; }
+    .stat b { font-size: 2.15rem; letter-spacing: -.06em; }
+    .stat:first-child b { color: var(--green); }
+    .graph-panel { background: var(--panel); border: 1px solid var(--line); padding: 25px 25px 19px; margin-bottom: 30px; }
+    .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 19px; }
+    h2 { margin: 0; font-size: 1.05rem; letter-spacing: -.02em; }
+    .range { color: var(--muted); font: 11px "DM Mono", monospace; }
+    .chart { position: relative; height: 230px; }
+    .grid { position: absolute; inset: 0 0 22px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+    .grid div { border-top: 1px solid #20302b; position: relative; }
+    .grid span { position: absolute; right: calc(100% + 10px); top: -8px; color: var(--muted); font: 10px "DM Mono", monospace; }
+    svg { position: absolute; inset: 0 0 22px; width: 100%; height: calc(100% - 22px); overflow: visible; }
+    .axis { position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-between; color: var(--muted); font: 10px "DM Mono", monospace; }
+    .servers { display: grid; gap: 9px; }
+    .server-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px 24px; background: var(--panel); border-left: 2px solid var(--line); padding: 18px 20px 15px; }
+    .server-row.online { border-left-color: var(--green); }
+    .server-row.offline { border-left-color: var(--red); }
+    .server-name { font-size: 1rem; font-weight: 600; }
+    .server-id { color: var(--muted); font: 11px "DM Mono", monospace; margin-top: 5px; }
+    .status { display: flex; align-items: center; gap: 8px; font: 11px "DM Mono", monospace; text-transform: uppercase; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px var(--green); }
+    .offline .dot { background: var(--red); box-shadow: 0 0 12px var(--red); }
+    .bar { height: 5px; background: #24332f; overflow: hidden; }
+    .bar i { display: block; height: 100%; background: var(--green); transition: width .5s ease; }
+    .offline .bar i { background: var(--red); }
+    .uptime { font: 500 1.15rem "DM Mono", monospace; text-align: right; }
+    .server-chart { grid-column: 1 / -1; position: relative; height: 92px; border-top: 1px solid #20302b; }
+    .server-chart svg { inset: 10px 0 17px; height: calc(100% - 27px); }
+    .server-chart .axis { bottom: 0; }
+    .empty, .error { color: var(--muted); padding: 30px 0; }
+    footer { color: var(--muted); font: 11px "DM Mono", monospace; margin-top: 25px; }
+    @media (max-width: 700px) {
+      main { width: min(100% - 26px, 560px); padding-top: 26px; }
+      header { align-items: flex-start; flex-direction: column; padding-bottom: 26px; }
+      .refresh { text-align: left; }
+      .summary { grid-template-columns: repeat(2, 1fr); }
+      .stat:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
+      .stat:nth-child(4) { border-top: 1px solid var(--line); }
+      .stat { padding: 17px 14px; }
+      .stat b { font-size: 1.65rem; }
+      .graph-panel { padding: 18px 15px 15px 30px; }
+      .server-row { gap: 12px; padding: 15px; }
+      .server-row .status { grid-column: 1 / -1; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <div class="brand"><span class="mark"></span><h1>Parrot Status</h1></div>
+        <p class="subhead">A quiet readout of what is alive.</p>
+      </div>
+      <div class="refresh">LIVE MONITOR<strong id="updated">Connecting…</strong></div>
+    </header>
+    <section class="summary" aria-label="Fleet summary">
+      <div class="stat"><small>Average uptime</small><b id="fleet-uptime">—</b></div>
+      <div class="stat"><small>Servers</small><b id="server-count">—</b></div>
+      <div class="stat"><small>Online</small><b id="online-count">—</b></div>
+      <div class="stat"><small>Latest pulse</small><b id="latest-pulse">—</b></div>
+    </section>
+    <section>
+      <div class="panel-head"><h2>Machines / uptime history</h2><span class="range" id="server-note">—</span></div>
+      <div class="servers" id="servers"><p class="empty">Listening for the fleet…</p></div>
+    </section>
+    <footer>Auto-refreshes every 30 seconds · status.justparrot.me</footer>
+  </main>
+  <script>
+    const api = window.location.origin;
+    const $ = (id) => document.getElementById(id);
+    const formatPct = (value) => value == null ? "—" : `${Number(value).toFixed(2)}%`;
+    async function fetchJson(path) {
+      const response = await fetch(`${api}${path}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      return response.json();
+    }
+    function drawGraph(days, name) {
+      const values = days.map(day => day.uptime == null ? 0 : Number(day.uptime));
+      if (!values.length) return "";
+      const points = values.map((value, index) => {
+        const x = values.length === 1 ? 50 : index * 100 / (values.length - 1);
+        return `${x},${100 - Math.max(0, Math.min(100, value))}`;
+      });
+      const safeName = escapeHtml(name);
+      return `<div class="server-chart" aria-label="${safeName} uptime over the last 60 days">
+        <div class="axis"><span>${days[0].day}</span><span>30 days</span><span>Today</span></div>
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="${safeName} uptime graph">
+          <path d="M 0,100 L ${points.join(" L ")} L 100,100 Z" fill="rgba(156,255,189,.08)"></path>
+          <path d="M ${points.join(" L ")}" fill="none" stroke="#9cffbd" stroke-width="1.5" vector-effect="non-scaling-stroke"></path>
+        </svg>
+      </div>`;
+    }
+    function renderServers(servers, uptimeById) {
+      const online = servers.filter(server => server.status === "online").length;
+      const values = servers.map(server => uptimeById[server.id]?.at(-1)?.uptime).filter(value => value != null);
+      const fleet = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+      $("server-count").textContent = servers.length;
+      $("online-count").textContent = `${online}/${servers.length}`;
+      $("fleet-uptime").textContent = formatPct(fleet);
+      $("server-note").textContent = `${online} responding now`;
+      $("servers").innerHTML = servers.length ? servers.map(server => {
+        const days = uptimeById[server.id] || [];
+        const current = days.at(-1)?.uptime;
+        return `<article class="server-row ${server.status}">
+          <div><div class="server-name">${escapeHtml(server.name)}</div><div class="server-id">NODE ${server.id}</div></div>
+          <div class="uptime">${formatPct(current)}</div>
+          <div class="status"><span class="dot"></span>${server.status}</div>
+          ${drawGraph(days, server.name)}
+        </article>`;
+      }).join("") : '<p class="empty">No machines registered yet.</p>';
+    }
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;" }[char]));
+    }
+    async function refresh() {
+      try {
+        const servers = await fetchJson("/servers");
+        const uptimeEntries = await Promise.all(servers.map(async server => [server.id, await fetchJson(`/servers/${server.id}/uptime`)]));
+        const uptimeById = Object.fromEntries(uptimeEntries);
+        renderServers(servers, uptimeById);
+        const latest = servers.reduce((max, server) => Math.max(max, server.last_heartbeat || 0), 0);
+        $("latest-pulse").textContent = latest ? new Date(latest).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
+        $("updated").textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
+      } catch (error) {
+        $("updated").textContent = "Connection lost";
+        $("servers").innerHTML = `<p class="error">Could not read the fleet: ${escapeHtml(error.message)}</p>`;
+      }
+    }
+    refresh();
+    setInterval(refresh, 30000);
+  </script>
+</body>
+</html>
