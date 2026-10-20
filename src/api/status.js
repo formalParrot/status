@@ -28,10 +28,11 @@ router.get("/servers/:id/uptime", (req, res) => {
 })
 
 router.post("/servers/:id/reset-uptime", (req, res) => {
-  if (!resetUptime(req.params.id)) {
+  const resetAt = resetUptime(req.params.id);
+  if (!resetAt) {
     return res.status(404).json({ error: "Server not found" });
   }
-  res.status(204).end();
+  res.json({ id: Number(req.params.id), uptimeResetAt: resetAt });
 });
 
 router.delete("/servers/:id", (req, res) => {

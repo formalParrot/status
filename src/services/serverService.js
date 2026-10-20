@@ -39,8 +39,8 @@ function getDailyUptime(serverId, days = 60) {
 
   const now = Date.now();
   const today = Math.floor(now / DAY_MS);
-  const earliest = Math.max(Math.floor(server.created_at / DAY_MS), today - (days - 1));
   const uptimeStart = Math.max(server.created_at, server.uptime_reset_at ?? server.created_at);
+  const earliest = Math.max(Math.floor(uptimeStart / DAY_MS), today - (days - 1));
 
   const heartbeats = db.prepare(`
     SELECT timestamp, status
@@ -52,18 +52,14 @@ function getDailyUptime(serverId, days = 60) {
   const result = [];
   for (let day = earliest; day <= today; day++) {
     const dayStart = day * DAY_MS;
-    const windowStart = Math.max(
-      dayStart,
-      server.created_at,
-      dayStart + DAY_MS > uptimeStart ? uptimeStart : server.created_at
-    );
+    const windowStart = Math.max(dayStart, uptimeStart);
     const windowEnd = Math.min(dayStart + DAY_MS, now);          // clamp partial current day
     let onlineMs = 0;
 
     for (let index = 0; index < heartbeats.length; index++) {
       const heartbeat = heartbeats[index];
       if (heartbeat.status !== 'online') continue;
-      if (heartbeat.timestamp < uptimeStart && windowEnd > uptimeStart) continue;
+      if (heartbeat.timestamp < uptimeStart) continue;
 
       const nextHeartbeat = heartbeats[index + 1]?.timestamp ?? now;
       const segmentStart = Math.max(heartbeat.timestamp, windowStart);
@@ -100,7 +96,7 @@ function resetUptime(serverId) {
     return result.changes;
   });
 
-  return transaction();
+  return transaction() ? now : null;
 }
 
 function createServer(name) {
@@ -111,9 +107,9 @@ function createServer(name) {
 
   const transaction = db.transaction(() => {
     const result = db.prepare(`
-      INSERT INTO servers (name, token_hash, created_at)
-      VALUES (?, ?, ?)
-    `).run(name, tokenHash, now);
+      INSERT INTO servers (name, token_hash, created_at, uptime_reset_at)
+      VALUES (?, ?, ?, ?)
+    `).run(name, tokenHash, now, now);
 
     db.prepare(`
       INSERT INTO install_tokens (token_hash, server_id, server_token, expires_at)

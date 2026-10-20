@@ -17,5 +17,6 @@ const serverColumns = db.prepare("PRAGMA table_info(servers)").all();
 if (!serverColumns.some((column) => column.name === "uptime_reset_at")) {
   db.exec("ALTER TABLE servers ADD COLUMN uptime_reset_at INTEGER");
 }
+db.exec("UPDATE servers SET uptime_reset_at = created_at WHERE uptime_reset_at IS NULL");
 
 module.exports = db;
