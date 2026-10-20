@@ -18,9 +18,10 @@ function recordHeartbeat(serverId, status, metrics) {
 
   db.prepare(`
     UPDATE servers
-    SET status = ?, last_heartbeat = ?, metrics = ?
+    SET status = ?, last_heartbeat = ?, metrics = ?,
+        uptime_reset_at = COALESCE(uptime_reset_at, ?)
     WHERE id = ?
-  `).run(status, now, JSON.stringify(metrics ?? {}), serverId)
+  `).run(status, now, JSON.stringify(metrics ?? {}), now, serverId)
 
   db.prepare(`
     INSERT INTO heartbeat_log (server_id, timestamp, status)
