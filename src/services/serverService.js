@@ -47,7 +47,8 @@ function getDailyUptime(serverId, days = 60) {
     FROM heartbeat_log
     WHERE server_id = ? AND timestamp >= ? AND timestamp <= ?
     ORDER BY timestamp ASC
-  `).all(serverId, earliest * DAY_MS - OFFLINE_THRESHOLD, now);
+  `).all(serverId, uptimeStart, now);
+  heartbeats.unshift({ timestamp: uptimeStart, status: 'online' });
 
   const result = [];
   for (let day = earliest; day <= today; day++) {
@@ -59,7 +60,6 @@ function getDailyUptime(serverId, days = 60) {
     for (let index = 0; index < heartbeats.length; index++) {
       const heartbeat = heartbeats[index];
       if (heartbeat.status !== 'online') continue;
-      if (heartbeat.timestamp < uptimeStart) continue;
 
       const nextHeartbeat = heartbeats[index + 1]?.timestamp ?? now;
       const segmentStart = Math.max(heartbeat.timestamp, windowStart);
