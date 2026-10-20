@@ -62,9 +62,15 @@
     .bar i { display: block; height: 100%; background: var(--green); transition: width .5s ease; }
     .offline .bar i { background: var(--red); }
     .uptime { font: 500 1.15rem "DM Mono", monospace; text-align: right; }
-    .server-chart { grid-column: 1 / -1; position: relative; height: 92px; border-top: 1px solid #20302b; }
-    .server-chart svg { inset: 10px 0 17px; height: calc(100% - 27px); }
-    .server-chart .axis { bottom: 0; }
+    .server-chart { grid-column: 1 / -1; border-top: 1px solid #20302b; padding-top: 12px; }
+    .day-strip { display: grid; grid-template-columns: repeat(60, minmax(5px, 1fr)); gap: 3px; height: 54px; align-items: end; }
+    .day { position: relative; min-width: 0; height: 100%; background: #293631; cursor: help; }
+    .day::after { content: ""; position: absolute; inset: auto 0 0; height: var(--uptime); background: var(--green); }
+    .day.partial::after { background: var(--amber); }
+    .day.empty::after { height: 0; }
+    .day:hover { outline: 1px solid var(--ink); z-index: 1; }
+    .day:hover::before { content: attr(data-detail); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: max-content; max-width: 190px; padding: 7px 9px; color: var(--ink); background: #1b2924; border: 1px solid var(--line); font: 10px/1.45 "DM Mono", monospace; text-align: center; z-index: 2; }
+    .day-axis { display: flex; justify-content: space-between; color: var(--muted); font: 10px "DM Mono", monospace; margin-top: 8px; }
     .empty, .error { color: var(--muted); padding: 30px 0; }
     footer { color: var(--muted); font: 11px "DM Mono", monospace; margin-top: 25px; }
     @media (max-width: 700px) {
@@ -112,20 +118,35 @@
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       return response.json();
     }
+    function formatDuration(milliseconds) {
+      const minutes = Math.max(0, Math.round(milliseconds / 60000));
+      if (minutes < 60) return `${minutes}m`;
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = minutes % 60;
+      return `${hours}h ${remainingMinutes}m`;
+    }
     function drawGraph(days, name) {
-      const values = days.map(day => day.uptime == null ? 0 : Number(day.uptime));
-      if (!values.length) return "";
-      const points = values.map((value, index) => {
-        const x = values.length === 1 ? 50 : index * 100 / (values.length - 1);
-        return `${x},${100 - Math.max(0, Math.min(100, value))}`;
-      });
+      if (!days.length) return "";
       const safeName = escapeHtml(name);
+      const now = Date.now();
+      const cells = days.map((day) => {
+        const start = Date.parse(`${day.day}T00:00:00Z`);
+        const end = Math.min(start + 86400000, now);
+        const duration = Math.max(0, end - start);
+        const uptime = day.uptime == null ? null : Math.max(0, Math.min(100, Number(day.uptime)));
+        const downtime = uptime == null ? null : duration * (100 - uptime) / 100;
+        const detail = uptime == null
+          ? `${day.day} · no data`
+          : `${day.day} · ${uptime.toFixed(2)}% up · ${formatDuration(downtime)} down`;
+        return `<div class="day ${uptime == null ? "empty" : ""} ${uptime != null && uptime < 100 ? "partial" : ""}"
+          style="--uptime:${uptime == null ? 0 : uptime}%"
+          data-detail="${escapeHtml(detail)}"
+          aria-label="${escapeHtml(detail)}"
+          title="${escapeHtml(detail)}"></div>`;
+      }).join("");
       return `<div class="server-chart" aria-label="${safeName} uptime over the last 60 days">
-        <div class="axis"><span>${days[0].day}</span><span>30 days</span><span>Today</span></div>
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="${safeName} uptime graph">
-          <path d="M 0,100 L ${points.join(" L ")} L 100,100 Z" fill="rgba(156,255,189,.08)"></path>
-          <path d="M ${points.join(" L ")}" fill="none" stroke="#9cffbd" stroke-width="1.5" vector-effect="non-scaling-stroke"></path>
-        </svg>
+        <div class="day-strip">${cells}</div>
+        <div class="day-axis"><span>${days[0].day}</span><span>30 days</span><span>Today</span></div>
       </div>`;
     }
     function renderServers(servers, uptimeById) {
