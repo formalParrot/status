@@ -31,12 +31,16 @@ the server-side `.env` file:
 
 ```dotenv
 ADMIN_PIN=123456
+DISCORD_LOGO_URL=https://example.com/parrot-status-logo.png
 ```
 
 Copy `.env.example` to `.env`, replace the example with a six-digit PIN,
 and restart the API. The `.env` file is ignored by Git. Environment variables
 provided by the process still take precedence over values from `.env`. Do not
 put this key in the public dashboard or in client-side code.
+
+Set `DISCORD_LOGO_URL` to a publicly reachable PNG, JPG, or GIF URL. It is
+used as the avatar for every Discord webhook notification.
 
 Open `/manage` to sign in with the PIN. The session expires after eight hours.
 The admin page can create, rename, and delete servers; reset uptime; publish

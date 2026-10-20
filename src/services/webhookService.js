@@ -1,4 +1,5 @@
 const db = require("../db/database");
+const DISCORD_LOGO_URL = process.env.DISCORD_LOGO_URL || "";
 
 async function notifyServer(serverId, event, details) {
   const hooks = db.prepare(`
@@ -12,6 +13,8 @@ async function notifyServer(serverId, event, details) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          username: "Parrot Status",
+          ...(DISCORD_LOGO_URL ? { avatar_url: DISCORD_LOGO_URL } : {}),
           embeds: [{
             title: `Parrot Status: ${event}`,
             description: details,
