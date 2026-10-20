@@ -40,7 +40,7 @@ function getDailyUptime(serverId, days = 60) {
   const now = Date.now();
   const today = Math.floor(now / DAY_MS);
   const uptimeStart = Math.max(server.created_at, server.uptime_reset_at ?? server.created_at);
-  const earliest = Math.max(Math.floor(uptimeStart / DAY_MS), today - (days - 1));
+  const earliest = today - (days - 1);
 
   const heartbeats = db.prepare(`
     SELECT timestamp, status
@@ -99,7 +99,7 @@ function resetUptime(serverId) {
   return transaction() ? now : null;
 }
 
-function createServer(name) {
+function createServer(title) {
   const rawToken = generateToken()
   const tokenHash = hashToken(rawToken)
   const installToken = generateToken()
@@ -107,9 +107,9 @@ function createServer(name) {
 
   const transaction = db.transaction(() => {
     const result = db.prepare(`
-      INSERT INTO servers (name, token_hash, created_at, uptime_reset_at)
-      VALUES (?, ?, ?, ?)
-    `).run(name, tokenHash, now, now);
+      INSERT INTO servers (name, title, token_hash, created_at, uptime_reset_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(title, title, tokenHash, now, now);
 
     db.prepare(`
       INSERT INTO install_tokens (token_hash, server_id, server_token, expires_at)
@@ -120,7 +120,7 @@ function createServer(name) {
   });
 
   const id = transaction();
-  return { id, name, rawToken, installToken, installTokenExpiresAt: now + INSTALL_TOKEN_TTL_MS }
+  return { id, title, rawToken, installToken, installTokenExpiresAt: now + INSTALL_TOKEN_TTL_MS }
 }
 
 function getInstallToken(token) {
@@ -147,14 +147,14 @@ function completeInstallToken(token) {
 
 function getServers() {
   return db.prepare(`
-    SELECT id, name, created_at, status, last_heartbeat, metrics
+    SELECT id, title, name, created_at, status, last_heartbeat, metrics
     FROM servers
   `).all().map(toPublic);
 }
 
 function findServerById(id) {
   const server = db.prepare(`
-    SELECT id, name, created_at, status, last_heartbeat, metrics
+    SELECT id, title, name, created_at, status, last_heartbeat, metrics
     FROM servers
     WHERE id = ?
   `).get(id)
@@ -164,11 +164,21 @@ function findServerById(id) {
 
 function findServerByTokenHash(tokenhash) {
   return db.prepare(`
-    SELECT id, name, created_at, status, last_heartbeat, metrics
+    SELECT id, title, name, created_at, status, last_heartbeat, metrics
     FROM servers
     WHERE token_hash = ?
   `).get(tokenhash);
 };
+
+function updateServerTitle(id, title) {
+  const result = db.prepare(`
+    UPDATE servers
+    SET title = ?
+    WHERE id = ?
+  `).run(title, id);
+
+  return result.changes;
+}
 
 function deleteServerById(id) {
   const transaction = db.transaction((serverId) => {
@@ -189,6 +199,7 @@ module.exports = {
   getServers,
   findServerById,
   findServerByTokenHash,
+  updateServerTitle,
   recordHeartbeat,
   getDailyUptime,
   resetUptime,

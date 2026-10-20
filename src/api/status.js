@@ -8,6 +8,7 @@ const {
   getServers,
   findServerById,
   findServerByTokenHash,
+  updateServerTitle,
   getDailyUptime,
   resetUptime,
   deleteServerById
@@ -28,6 +29,19 @@ router.get("/servers/:id/uptime", (req, res) => {
   res.json(getDailyUptime(req.params.id))
 })
 
+router.patch("/servers/:id", authenticateAdmin, (req, res) => {
+  const title = typeof req.body.title === "string" ? req.body.title.trim() : "";
+  if (!title) {
+    return res.status(400).json({ error: "Missing server title" });
+  }
+
+  if (!updateServerTitle(req.params.id, title)) {
+    return res.status(404).json({ error: "Server not found" });
+  }
+
+  res.json(findServerById(req.params.id));
+});
+
 router.post("/servers/:id/reset-uptime", authenticateAdmin, (req, res) => {
   const resetAt = resetUptime(req.params.id);
   if (!resetAt) {
@@ -43,18 +57,18 @@ router.delete("/servers/:id", authenticateAdmin, (req, res) => {
 });
 
 router.post("/servers", authenticateAdmin, (req, res) => {
-  const { name } = req.body;
+  const title = req.body.title || req.body.name;
 
-  if (!name) {
-    return res.status(400).json({ error: "Missing server name" });
+  if (!title) {
+    return res.status(400).json({ error: "Missing server title" });
   }
   
-  const data = createServer(name)
+  const data = createServer(title)
 
   const installUrl = `${PUBLIC_URL}/install.sh/${data.installToken}`;
   res.json({
     id: data.id,
-    name: data.name,
+    title: data.title,
     rawToken: data.rawToken,
     installCommand: `curl -fsSL '${installUrl}' | sudo bash`,
     installTokenExpiresAt: data.installTokenExpiresAt

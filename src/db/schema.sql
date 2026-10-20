@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS servers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
+    title TEXT,
     token_hash TEXT NOT NULL UNIQUE,
 
     status TEXT NOT NULL DEFAULT 'unknown',

@@ -161,10 +161,10 @@
         const days = uptimeById[server.id] || [];
         const current = days.at(-1)?.uptime;
         return `<article class="server-row ${server.status}">
-          <div><div class="server-name">${escapeHtml(server.name)}</div><div class="server-id">NODE ${server.id}</div></div>
+          <div><div class="server-name">${escapeHtml(server.title || server.name)}</div><div class="server-id">ID ${server.id}</div></div>
           <div class="uptime">${formatPct(current)}</div>
           <div class="status"><span class="dot"></span>${server.status}</div>
-          ${drawGraph(days, server.name)}
+          ${drawGraph(days, server.title || server.name)}
         </article>`;
       }).join("") : '<p class="empty">No machines registered yet.</p>';
     }
