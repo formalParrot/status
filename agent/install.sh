@@ -80,14 +80,9 @@ EOF
 chmod 755 "$APP_DIR/agent.sh"
 
 echo
-PM2_USER="${SUDO_USER:-}"
-if [[ -z "$PM2_USER" || "$PM2_USER" == "root" ]]; then
-    echo "SUDO_USER is not set. Run this installer with sudo from the account that should run Parrot Status."
-    exit 1
-fi
-
-if ! id "$PM2_USER" >/dev/null 2>&1 || [[ "$PM2_USER" == "root" ]]; then
-    echo "User '$PM2_USER' does not exist or cannot be root."
+PM2_USER="${SUDO_USER:-root}"
+if ! id "$PM2_USER" >/dev/null 2>&1; then
+    echo "User '$PM2_USER' does not exist."
     exit 1
 fi
 
