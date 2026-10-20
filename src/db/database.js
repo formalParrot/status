@@ -13,4 +13,9 @@ db.pragma("journal_mode = WAL");
 
 db.exec(schema);
 
+const serverColumns = db.prepare("PRAGMA table_info(servers)").all();
+if (!serverColumns.some((column) => column.name === "uptime_reset_at")) {
+  db.exec("ALTER TABLE servers ADD COLUMN uptime_reset_at INTEGER");
+}
+
 module.exports = db;

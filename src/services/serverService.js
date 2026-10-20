@@ -29,12 +29,17 @@ function recordHeartbeat(serverId, status, metrics) {
 }
 
 function getDailyUptime(serverId, days = 60) {
-  const server = db.prepare(`SELECT created_at FROM servers WHERE id = ?`).get(serverId);
+  const server = db.prepare(`
+    SELECT created_at, uptime_reset_at
+    FROM servers
+    WHERE id = ?
+  `).get(serverId);
   if (!server) return [];
 
   const now = Date.now();
   const today = Math.floor(now / DAY_MS);
   const earliest = Math.max(Math.floor(server.created_at / DAY_MS), today - (days - 1));
+  const uptimeStart = Math.max(server.created_at, server.uptime_reset_at ?? server.created_at);
 
   const heartbeats = db.prepare(`
     SELECT timestamp, status
@@ -46,13 +51,18 @@ function getDailyUptime(serverId, days = 60) {
   const result = [];
   for (let day = earliest; day <= today; day++) {
     const dayStart = day * DAY_MS;
-    const windowStart = Math.max(dayStart, server.created_at);   // clamp to registration
+    const windowStart = Math.max(
+      dayStart,
+      server.created_at,
+      dayStart + DAY_MS > uptimeStart ? uptimeStart : server.created_at
+    );
     const windowEnd = Math.min(dayStart + DAY_MS, now);          // clamp partial current day
     let onlineMs = 0;
 
     for (let index = 0; index < heartbeats.length; index++) {
       const heartbeat = heartbeats[index];
       if (heartbeat.status !== 'online') continue;
+      if (heartbeat.timestamp < uptimeStart && windowEnd > uptimeStart) continue;
 
       const nextHeartbeat = heartbeats[index + 1]?.timestamp ?? now;
       const segmentStart = Math.max(heartbeat.timestamp, windowStart);
@@ -75,6 +85,21 @@ function getDailyUptime(serverId, days = 60) {
     });
   }
   return result;
+}
+
+function resetUptime(serverId) {
+  const now = Date.now();
+  const transaction = db.transaction(() => {
+    const result = db.prepare(`
+      UPDATE servers
+      SET uptime_reset_at = ?
+      WHERE id = ?
+    `).run(now, serverId);
+
+    return result.changes;
+  });
+
+  return transaction();
 }
 
 function createServer(name) {
@@ -169,6 +194,7 @@ module.exports = {
   findServerByTokenHash,
   recordHeartbeat,
   getDailyUptime,
+  resetUptime,
   deleteServerById,
   getInstallToken,
   completeInstallToken

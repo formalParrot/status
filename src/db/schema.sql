@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS servers (
 
     metrics TEXT,
 
-    created_at INTEGER NOT NULL
+    created_at INTEGER NOT NULL,
+    uptime_reset_at INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS heartbeat_log (
