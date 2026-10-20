@@ -79,6 +79,7 @@ router.post("/servers", authenticateAdmin, (req, res) => {
   res.json({
     id: data.id,
     title: data.title,
+    installUrl,
     rawToken: data.rawToken,
     installCommand: `curl -fsSL '${installUrl}' | sudo bash`,
     installTokenExpiresAt: data.installTokenExpiresAt
