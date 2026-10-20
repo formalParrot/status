@@ -53,6 +53,8 @@
     .server-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px 24px; background: var(--panel); border-left: 2px solid var(--line); padding: 18px 20px 15px; }
     .server-row.online { border-left-color: var(--green); }
     .server-row.offline { border-left-color: var(--red); }
+    .server-row.health-yellow { border-left-color: var(--amber); }
+    .server-row.health-red { border-left-color: var(--red); }
     .server-name { font-size: 1rem; font-weight: 600; }
     .server-id { color: var(--muted); font: 11px "DM Mono", monospace; margin-top: 5px; }
     .status { display: flex; align-items: center; gap: 8px; font: 11px "DM Mono", monospace; text-transform: uppercase; }
@@ -62,11 +64,15 @@
     .bar i { display: block; height: 100%; background: var(--green); transition: width .5s ease; }
     .offline .bar i { background: var(--red); }
     .uptime { font: 500 1.15rem "DM Mono", monospace; text-align: right; }
+    .health-green .uptime { color: var(--green); }
+    .health-yellow .uptime { color: var(--amber); }
+    .health-red .uptime { color: var(--red); }
     .server-chart { grid-column: 1 / -1; border-top: 1px solid #20302b; padding-top: 12px; }
     .day-strip { display: grid; grid-template-columns: repeat(60, minmax(5px, 1fr)); gap: 3px; height: 54px; align-items: end; }
     .day { position: relative; min-width: 0; height: 100%; background: #293631; cursor: help; }
     .day::after { content: ""; position: absolute; inset: auto 0 0; height: var(--uptime); background: var(--green); }
     .day.partial::after { background: var(--amber); }
+    .day.low::after { background: var(--red); }
     .day.empty::after { height: 0; }
     .day:hover { outline: 1px solid var(--ink); z-index: 1; }
     .day:hover::before { content: attr(data-detail); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: max-content; max-width: 190px; padding: 7px 9px; color: var(--ink); background: #1b2924; border: 1px solid var(--line); font: 10px/1.45 "DM Mono", monospace; text-align: center; z-index: 2; }
@@ -138,7 +144,8 @@
         const detail = uptime == null
           ? `${day.day} · no data`
           : `${day.day} · ${uptime.toFixed(2)}% up · ${formatDuration(downtime)} down`;
-        return `<div class="day ${uptime == null ? "empty" : ""} ${uptime != null && uptime < 100 ? "partial" : ""}"
+        const healthClass = uptime == null ? "empty" : uptime < 90 ? "low" : uptime < 98 ? "partial" : "";
+        return `<div class="day ${healthClass}"
           style="--uptime:${uptime == null ? 0 : uptime}%"
           data-detail="${escapeHtml(detail)}"
           aria-label="${escapeHtml(detail)}"
@@ -160,7 +167,8 @@
       $("servers").innerHTML = servers.length ? servers.map(server => {
         const days = uptimeById[server.id] || [];
         const current = days.at(-1)?.uptime;
-        return `<article class="server-row ${server.status}">
+        const healthClass = current == null ? "" : current < 90 ? "health-red" : current < 98 ? "health-yellow" : "health-green";
+        return `<article class="server-row ${server.status} ${healthClass}">
           <div><div class="server-name">${escapeHtml(server.title || server.name)}</div><div class="server-id">ID ${server.id}</div></div>
           <div class="uptime">${formatPct(current)}</div>
           <div class="status"><span class="dot"></span>${server.status}</div>
