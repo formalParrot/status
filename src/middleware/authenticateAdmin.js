@@ -1,8 +1,12 @@
 const crypto = require("crypto");
+const { authenticateAdminSession } = require("./adminSession");
 
 const adminKey = process.env.ADMIN_KEY;
 
 function authenticateAdmin(req, res, next) {
+  if (req.get("x-admin-session") || req.cookies?.["parrot-admin-session"]) {
+    return authenticateAdminSession(req, res, next);
+  }
   if (!adminKey) {
     console.error("ADMIN_KEY is not configured; refusing admin request");
     return res.status(503).json({ error: "Admin authentication is unavailable" });

@@ -2,7 +2,10 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "../.env") });
-const { getInstallToken, completeInstallToken } = require("./services/serverService");
+const { getInstallToken, completeInstallToken, getServers } = require("./services/serverService");
+const { notifyServer } = require("./services/webhookService");
+const crypto = require("crypto");
+const { createAdminSession, destroyAdminSession } = require("./middleware/adminSession");
 
 const app = express();
 const PORT = process.env.PORT || 2552;
@@ -10,7 +13,37 @@ const PUBLIC_URL = (process.env.PUBLIC_URL || "https://status.justparrot.me").re
 const INSTALLER_VERSION = "2026-10-19-shell-agent-v3";
 
 app.use(express.json());
+app.use((req, res, next) => {
+    req.cookies = {};
+    const cookie = req.get("cookie") || "";
+    cookie.split(";").forEach((part) => {
+        const [key, ...value] = part.trim().split("=");
+        if (key) req.cookies[key] = decodeURIComponent(value.join("="));
+    });
+    next();
+});
 app.use(express.static(path.join(__dirname, "../public"), { index: "index.html" }));
+app.get("/manage", (req, res) => {
+    res.sendFile(path.join(__dirname, "../public/manage.html"));
+});
+
+app.post("/admin/login", (req, res) => {
+    const configured = process.env.ADMIN_KEY || "";
+    const provided = String(req.body.pin || "");
+    const valid = configured && provided.length === configured.length &&
+        crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(configured));
+    if (!valid) return res.status(401).json({ error: "Invalid PIN" });
+    const session = createAdminSession();
+    res.set("Set-Cookie", `parrot-admin-session=${session}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`);
+    res.json({ ok: true });
+});
+
+app.post("/admin/logout", (req, res) => {
+    const session = req.cookies["parrot-admin-session"];
+    if (session) destroyAdminSession(session);
+    res.set("Set-Cookie", "parrot-admin-session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0");
+    res.status(204).end();
+});
 
 app.get("/install.sh/health", (req, res) => {
     res.set("Cache-Control", "no-store").json({ installerVersion: INSTALLER_VERSION });
@@ -50,12 +83,28 @@ app.get("/install.sh/:token", (req, res) => {
 
 const heartbeat = require("./api/heartbeat");
 const status = require("./api/status");
+const admin = require("./api/admin");
 //const servers = require("./api/servers");
 
 app.use("/", status);
+app.use("/admin/api", admin);
 app.use("/heartbeat", heartbeat);
 //app.use("/status/servers", servers);
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on port ${PORT}`);
 });
+
+const lastKnownStatus = new Map();
+function checkServerTransitions() {
+    getServers().forEach((server) => {
+        const previous = lastKnownStatus.get(server.id);
+        if (previous && previous !== server.status) {
+            notifyServer(server.id, server.status === "online" ? "server online" : "server offline",
+                `${server.title || server.name} is now ${server.status}.`).catch(() => {});
+        }
+        lastKnownStatus.set(server.id, server.status);
+    });
+}
+checkServerTransitions();
+setInterval(checkServerTransitions, 30_000);

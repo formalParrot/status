@@ -11,6 +11,8 @@ const {
   updateServerTitle,
   getDailyUptime,
   resetUptime,
+  listIncidents,
+  listActiveMaintenance,
   deleteServerById
 } = require("../services/serverService")
 
@@ -28,6 +30,14 @@ router.get("/servers/:id", (req, res) => {
 router.get("/servers/:id/uptime", (req, res) => {
   res.json(getDailyUptime(req.params.id))
 })
+
+router.get("/incidents", (req, res) => {
+  res.json(listIncidents().filter((incident) => incident.status === "open"));
+});
+
+router.get("/maintenance", (req, res) => {
+  res.json(listActiveMaintenance());
+});
 
 router.patch("/servers/:id", authenticateAdmin, (req, res) => {
   const title = typeof req.body.title === "string" ? req.body.title.trim() : "";

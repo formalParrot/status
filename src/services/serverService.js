@@ -41,6 +41,10 @@ function getDailyUptime(serverId, days = 60) {
   const today = Math.floor(now / DAY_MS);
   const uptimeStart = Math.max(server.created_at, server.uptime_reset_at ?? server.created_at);
   const earliest = today - (days - 1);
+  const maintenance = db.prepare(`
+    SELECT starts_at, ends_at FROM maintenance_windows
+    WHERE server_id = ? AND starts_at < ? AND (ends_at IS NULL OR ends_at > ?)
+  `).all(serverId, now, earliest * DAY_MS);
 
   const heartbeats = db.prepare(`
     SELECT timestamp, status
@@ -55,6 +59,12 @@ function getDailyUptime(serverId, days = 60) {
     const dayStart = day * DAY_MS;
     const windowStart = Math.max(dayStart, uptimeStart);
     const windowEnd = Math.min(dayStart + DAY_MS, now);          // clamp partial current day
+    const maintenanceMs = maintenance.reduce((total, window) => {
+      const start = Math.max(window.starts_at, windowStart);
+      const end = Math.min(window.ends_at ?? now, windowEnd);
+      return total + Math.max(0, end - start);
+    }, 0);
+    const measuredMs = Math.max(0, windowEnd - windowStart - maintenanceMs);
     let onlineMs = 0;
 
     for (let index = 0; index < heartbeats.length; index++) {
@@ -76,12 +86,75 @@ function getDailyUptime(serverId, days = 60) {
 
     result.push({
       day: new Date(dayStart).toISOString().slice(0, 10),        // "2026-10-19" (UTC)
-      uptime: windowEnd > windowStart
-        ? Math.min(100, (onlineMs * 100) / (windowEnd - windowStart))
+      uptime: measuredMs > 0
+        ? Math.min(100, (Math.min(onlineMs, measuredMs) * 100) / measuredMs)
         : null,
     });
   }
+
   return result;
+}
+
+function listMaintenance(serverId) {
+  return db.prepare(`
+    SELECT id, server_id, title, starts_at, ends_at, created_at
+    FROM maintenance_windows WHERE server_id = ? ORDER BY starts_at DESC
+  `).all(serverId);
+}
+
+function listActiveMaintenance() {
+  return db.prepare(`
+    SELECT id, server_id, title, starts_at, ends_at
+    FROM maintenance_windows
+    WHERE starts_at <= ? AND (ends_at IS NULL OR ends_at > ?)
+    ORDER BY starts_at ASC
+  `).all(Date.now(), Date.now());
+}
+
+function createMaintenance(serverId, title, startsAt, endsAt = null) {
+  const result = db.prepare(`
+    INSERT INTO maintenance_windows (server_id, title, starts_at, ends_at, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(serverId, title, startsAt, endsAt, Date.now());
+  return db.prepare(`SELECT * FROM maintenance_windows WHERE id = ?`).get(result.lastInsertRowid);
+}
+
+function endMaintenance(id) {
+  return db.prepare(`
+    UPDATE maintenance_windows SET ends_at = COALESCE(ends_at, ?) WHERE id = ?
+  `).run(Date.now(), id).changes;
+}
+
+function getMaintenance(id) {
+  return db.prepare(`SELECT * FROM maintenance_windows WHERE id = ?`).get(id);
+}
+
+function listIncidents() {
+  return db.prepare(`SELECT * FROM incidents ORDER BY created_at DESC`).all();
+}
+
+function createIncident(serverId, title, description) {
+  const result = db.prepare(`
+    INSERT INTO incidents (server_id, title, description, created_at)
+    VALUES (?, ?, ?, ?)
+  `).run(serverId || null, title, description || '', Date.now());
+  return db.prepare(`SELECT * FROM incidents WHERE id = ?`).get(result.lastInsertRowid);
+}
+
+function resolveIncident(id) {
+  return db.prepare(`
+    UPDATE incidents SET status = 'resolved', resolved_at = ? WHERE id = ? AND status = 'open'
+  `).run(Date.now(), id).changes;
+}
+
+function updateIncident(id, title, description) {
+  return db.prepare(`
+    UPDATE incidents SET title = ?, description = ? WHERE id = ?
+  `).run(title, description || '', id).changes;
+}
+
+function deleteIncident(id) {
+  return db.prepare(`DELETE FROM incidents WHERE id = ?`).run(id).changes;
 }
 
 function resetUptime(serverId) {
@@ -205,5 +278,15 @@ module.exports = {
   resetUptime,
   deleteServerById,
   getInstallToken,
-  completeInstallToken
+  completeInstallToken,
+  listMaintenance,
+  listActiveMaintenance,
+  createMaintenance,
+  endMaintenance,
+  getMaintenance,
+  listIncidents,
+  createIncident,
+  resolveIncident,
+  updateIncident,
+  deleteIncident,
 }

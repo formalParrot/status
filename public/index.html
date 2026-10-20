@@ -8,13 +8,11 @@
     @import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
     :root {
-      --ink: #e9f0ed;
-      --muted: #8d9b96;
-      --line: #263631;
-      --panel: #101a17;
-      --canvas: #08100e;
-      --deep-blue: #3c5c5d;
-      --pale-blue: #7aa6ae;
+      --ink: #f2f2f2;
+      --muted: #a0a0a0;
+      --line: #3a3a3a;
+      --panel: #222;
+      --canvas: #171717;
       --green: #648a3d;
       --amber: #b5a45f;
       --red: #8d3431;
@@ -24,71 +22,55 @@
     body {
       margin: 0;
       color: var(--ink);
-      background: linear-gradient(135deg, var(--canvas) 0%, #10201f 55%, var(--deep-blue) 180%);
+      background: var(--canvas);
       font-family: "Space Grotesk", system-ui, sans-serif;
     }
     main { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 42px 0 64px; }
     header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 36px; }
-    .brand { display: flex; align-items: center; gap: 13px; }
-    .mark { width: 14px; height: 14px; background: var(--green); box-shadow: 0 0 18px rgba(100,138,61,.45); transform: rotate(45deg); }
-    h1 { margin: 0; font-size: clamp(2rem, 4vw, 3.6rem); letter-spacing: -.07em; line-height: .95; }
-    .subhead { margin: 10px 0 0 27px; color: var(--muted); font-size: .9rem; }
+    .brand { display: flex; align-items: center; }
+    h1 { margin: 0; color: #fff; font-size: clamp(2rem, 4vw, 3.6rem); letter-spacing: -.07em; line-height: .95; }
+    .subhead { margin: 10px 0 0; color: var(--muted); font-size: .9rem; }
     .refresh { color: var(--muted); font: 12px "DM Mono", monospace; text-align: right; }
-    .refresh strong { display: block; color: var(--green); font-weight: 400; margin-top: 6px; }
-    .summary { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); border-block: 1px solid var(--line); margin-bottom: 30px; }
-    .stat { padding: 23px 24px 25px; border-left: 1px solid var(--line); }
-    .stat:first-child { border-left: 0; }
-    .stat small { display: block; color: var(--muted); font: 11px "DM Mono", monospace; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 13px; }
-    .stat b { font-size: 2.15rem; letter-spacing: -.06em; }
-    .stat:first-child b { color: var(--green); }
-    .graph-panel { background: var(--panel); border: 1px solid var(--line); padding: 25px 25px 19px; margin-bottom: 30px; }
+    .refresh strong { display: block; color: #fff; font-weight: 400; margin-top: 6px; }
+    .overall { color: #fff; font-size: 1.1rem; margin: 0 0 28px; }
+    .overall.offline { color: var(--red); }
+    .notices { display: grid; gap: 8px; margin: -14px 0 28px; }
+    .notice { border-left: 2px solid #888; background: #222; padding: 11px 14px; color: #ddd; }
+    .notice strong { color: #fff; }
     .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 19px; }
     h2 { margin: 0; font-size: 1.05rem; letter-spacing: -.02em; }
     .range { color: var(--muted); font: 11px "DM Mono", monospace; }
     .chart { position: relative; height: 230px; }
     .grid { position: absolute; inset: 0 0 22px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
-    .grid div { border-top: 1px solid #20302b; position: relative; }
+    .grid div { border-top: 1px solid #333; position: relative; }
     .grid span { position: absolute; right: calc(100% + 10px); top: -8px; color: var(--muted); font: 10px "DM Mono", monospace; }
     svg { position: absolute; inset: 0 0 22px; width: 100%; height: calc(100% - 22px); overflow: visible; }
     .axis { position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-between; color: var(--muted); font: 10px "DM Mono", monospace; }
     .servers { display: grid; gap: 9px; }
     .server-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px 24px; background: var(--panel); border-left: 2px solid var(--line); padding: 18px 20px 15px; }
-    .server-row.online { border-left-color: var(--green); }
-    .server-row.offline { border-left-color: var(--red); }
-    .server-row.health-yellow { border-left-color: var(--amber); }
-    .server-row.health-red { border-left-color: var(--red); }
-    .server-name { font-size: 1rem; font-weight: 600; }
-    .status { display: flex; align-items: center; gap: 8px; font: 11px "DM Mono", monospace; text-transform: uppercase; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px rgba(100,138,61,.7); }
-    .offline .dot { background: var(--red); box-shadow: 0 0 10px rgba(141,52,49,.7); }
-    .bar { height: 5px; background: #24332f; overflow: hidden; }
-    .bar i { display: block; height: 100%; background: var(--green); transition: width .5s ease; }
-    .offline .bar i { background: var(--red); }
+    .server-name { color: #fff; font-size: 1rem; font-weight: 600; }
+    .status { display: flex; align-items: center; gap: 8px; color: var(--muted); font: 11px "DM Mono", monospace; text-transform: uppercase; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #6f7775; }
+    .offline .dot { background: #6f7775; }
     .uptime { font: 500 1.15rem "DM Mono", monospace; text-align: right; }
     .health-green .uptime { color: var(--green); }
     .health-yellow .uptime { color: var(--amber); }
     .health-red .uptime { color: var(--red); }
-    .server-chart { grid-column: 1 / -1; border-top: 1px solid #20302b; padding-top: 12px; }
+    .server-chart { grid-column: 1 / -1; border-top: 1px solid #333; padding-top: 12px; }
     .day-strip { display: grid; grid-template-columns: repeat(60, minmax(5px, 1fr)); gap: 3px; height: 54px; align-items: end; }
-    .day { position: relative; min-width: 0; height: 100%; background: #293631; cursor: help; }
+    .day { position: relative; min-width: 0; height: 100%; background: #444; cursor: help; }
     .day::after { content: ""; position: absolute; inset: auto 0 0; height: var(--uptime); background: var(--green); }
     .day.partial::after { background: var(--amber); }
     .day.low::after { background: var(--red); }
     .day.empty::after { height: 0; }
     .day:hover { outline: 1px solid var(--ink); z-index: 1; }
-    .day:hover::before { content: attr(data-detail); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: max-content; max-width: 190px; padding: 7px 9px; color: var(--ink); background: #1b2924; border: 1px solid var(--line); font: 10px/1.45 "DM Mono", monospace; text-align: center; z-index: 2; }
+    .day:hover::before { content: attr(data-detail); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: max-content; max-width: 190px; padding: 7px 9px; color: var(--ink); background: #292929; border: 1px solid var(--line); font: 10px/1.45 "DM Mono", monospace; text-align: center; z-index: 2; }
     .day-axis { display: flex; justify-content: space-between; color: var(--muted); font: 10px "DM Mono", monospace; margin-top: 8px; }
     .empty, .error { color: var(--muted); padding: 30px 0; }
     @media (max-width: 700px) {
       main { width: min(100% - 26px, 560px); padding-top: 26px; }
       header { align-items: flex-start; flex-direction: column; padding-bottom: 26px; }
       .refresh { text-align: left; }
-      .summary { grid-template-columns: repeat(2, 1fr); }
-      .stat:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
-      .stat:nth-child(4) { border-top: 1px solid var(--line); }
-      .stat { padding: 17px 14px; }
-      .stat b { font-size: 1.65rem; }
-      .graph-panel { padding: 18px 15px 15px 30px; }
       .server-row { gap: 12px; padding: 15px; }
       .server-row .status { grid-column: 1 / -1; }
     }
@@ -98,19 +80,15 @@
   <main>
     <header>
       <div>
-        <div class="brand"><span class="mark"></span><h1>Parrot Status</h1></div>
+        <div class="brand"><h1>Parrot Status</h1></div>
         <p class="subhead">Server uptime</p>
       </div>
       <div class="refresh">LIVE MONITOR<strong id="updated">Connecting…</strong></div>
     </header>
-    <section class="summary" aria-label="Fleet summary">
-      <div class="stat"><small>Average uptime</small><b id="fleet-uptime">—</b></div>
-      <div class="stat"><small>Servers</small><b id="server-count">—</b></div>
-      <div class="stat"><small>Online</small><b id="online-count">—</b></div>
-      <div class="stat"><small>Latest pulse</small><b id="latest-pulse">—</b></div>
-    </section>
+    <p class="overall" id="overall">Checking server status…</p>
+    <div class="notices" id="notices"></div>
     <section>
-      <div class="panel-head"><h2>Servers</h2><span class="range" id="server-note">—</span></div>
+      <div class="panel-head"><h2>Servers</h2></div>
       <div class="servers" id="servers"><p class="empty">Loading…</p></div>
     </section>
   </main>
@@ -156,13 +134,6 @@
       </div>`;
     }
     function renderServers(servers, uptimeById) {
-      const online = servers.filter(server => server.status === "online").length;
-      const values = servers.map(server => uptimeById[server.id]?.at(-1)?.uptime).filter(value => value != null);
-      const fleet = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
-      $("server-count").textContent = servers.length;
-      $("online-count").textContent = `${online}/${servers.length}`;
-      $("fleet-uptime").textContent = formatPct(fleet);
-      $("server-note").textContent = `${online} online`;
       $("servers").innerHTML = servers.length ? servers.map(server => {
         const days = uptimeById[server.id] || [];
         const current = days.at(-1)?.uptime;
@@ -181,11 +152,21 @@
     async function refresh() {
       try {
         const servers = await fetchJson("/servers");
+        const [incidents, maintenance] = await Promise.all([
+          fetchJson("/incidents"),
+          fetchJson("/maintenance")
+        ]);
+        const names = Object.fromEntries(servers.map(server => [server.id, server.title || server.name]));
+        $("notices").innerHTML = [
+          ...maintenance.map(item => `<div class="notice"><strong>Maintenance:</strong> ${escapeHtml(item.title)}${names[item.server_id] ? ` · ${escapeHtml(names[item.server_id])}` : ""}</div>`),
+          ...incidents.map(item => `<div class="notice"><strong>Incident:</strong> ${escapeHtml(item.title)}</div>`)
+        ].join("");
+        const allOperational = servers.length > 0 && servers.every(server => server.status === "online");
+        $("overall").textContent = allOperational ? "All servers operational" : servers.length ? "Some servers are offline" : "No servers configured";
+        $("overall").className = `overall${allOperational || !servers.length ? "" : " offline"}`;
         const uptimeEntries = await Promise.all(servers.map(async server => [server.id, await fetchJson(`/servers/${server.id}/uptime`)]));
         const uptimeById = Object.fromEntries(uptimeEntries);
         renderServers(servers, uptimeById);
-        const latest = servers.reduce((max, server) => Math.max(max, server.last_heartbeat || 0), 0);
-        $("latest-pulse").textContent = latest ? new Date(latest).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
         $("updated").textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
       } catch (error) {
         $("updated").textContent = "Connection lost";

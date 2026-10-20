@@ -33,3 +33,31 @@ CREATE TABLE IF NOT EXISTS install_tokens (
 
 CREATE INDEX IF NOT EXISTS idx_install_tokens_expiry
     ON install_tokens (expires_at);
+
+CREATE TABLE IF NOT EXISTS maintenance_windows (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    starts_at INTEGER NOT NULL,
+    ends_at INTEGER,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS incidents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id INTEGER,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'open',
+    created_at INTEGER NOT NULL,
+    resolved_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS discord_webhooks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id INTEGER,
+    name TEXT NOT NULL,
+    url TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL
+);
