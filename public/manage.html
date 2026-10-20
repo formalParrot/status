@@ -10,8 +10,9 @@
     main { width:min(900px,calc(100% - 32px)); margin:0 auto; padding:40px 0 64px } header { display:flex; justify-content:space-between; align-items:center; margin-bottom:30px }
     h1,h2 { margin:0 } h1 { font-size:32px; letter-spacing:-.05em } h2 { font-size:18px; margin-bottom:16px }
     section { background:var(--panel); border:1px solid var(--line); padding:22px; margin-top:18px }
-    input,textarea,select,button { width:100%; background:#181818; color:var(--text); border:1px solid #555; padding:10px; font:inherit }
-    textarea { min-height:72px; resize:vertical } button { cursor:pointer; width:auto; background:#f2f2f2; color:#171717; border:0; padding:10px 15px }
+    input,textarea,select,button { width:100%; background:#181818; color:var(--text); border:1px solid #555; border-radius:8px; padding:10px; font:inherit }
+    textarea { min-height:72px; resize:vertical } button { cursor:pointer; width:auto; background:#f2f2f2; color:#171717; border:0; border-radius:8px; padding:10px 15px; transition:transform .15s ease,opacity .15s ease }
+    button:hover { opacity:.88; transform:translateY(-1px) } button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible { outline:2px solid #f2f2f2; outline-offset:2px }
     .secondary { background:#333; color:var(--text) } .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px } form { display:grid; gap:12px }
     .item { border-top:1px solid var(--line); padding:14px 0; display:flex; justify-content:space-between; gap:15px; align-items:start } .item small { display:block; color:var(--muted); margin-top:4px }
     .hidden { display:none } .message { color:var(--muted); margin:10px 0 } @media(max-width:600px){.grid{grid-template-columns:1fr} header{align-items:start;gap:15px;flex-direction:column}}
@@ -19,7 +20,7 @@
 </head>
 <body><main>
   <header><h1>Manage status</h1><button id="logout" class="secondary hidden">Sign out</button></header>
-  <section id="login"><h2>Admin PIN</h2><form id="login-form"><input id="pin" type="password" inputmode="numeric" placeholder="PIN" required><button>Sign in</button></form><p class="message" id="login-message"></p></section>
+  <section id="login"><h2>Admin PIN</h2><form id="login-form"><input id="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="6-digit PIN" required><button>Sign in</button></form><p class="message" id="login-message"></p></section>
   <div id="app" class="hidden">
     <section><h2>Servers</h2><div id="servers"></div><form id="server-form"><input id="server-title" placeholder="Server title" required><button>Create server</button></form></section>
     <section><h2>Maintenance</h2><form id="maintenance-form"><div class="grid"><select id="maintenance-server" required></select><input id="maintenance-title" placeholder="Maintenance title" required></div><button>Start maintenance now</button></form><div id="maintenance-list"></div></section>

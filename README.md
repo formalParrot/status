@@ -9,7 +9,7 @@ Unless noted otherwise, routes are relative to the public API URL, for example
 |---|---|---|
 | `GET` | `/` | Live static dashboard showing fleet and per-server uptime. |
 | `GET` | `/manage` | Admin page for server, maintenance, incident, and webhook management. |
-| `POST` | `/admin/login` | Sign in to the admin page with the `ADMIN_KEY` PIN. |
+| `POST` | `/admin/login` | Sign in to the admin page with the `ADMIN_PIN` PIN. |
 | `POST` | `/admin/logout` | End the current admin session. |
 | `GET` | `/install.sh/health` | Check the installer endpoint and return its version. |
 | `GET` | `/install.sh/:token` | Generate a one-time shell installer for a server. |
@@ -26,14 +26,14 @@ Unless noted otherwise, routes are relative to the public API URL, for example
 | `POST` | `/heartbeat` | Record a heartbeat from a monitored server. Requires the server's bearer token. |
 
 Mutating server routes (`POST /servers`, `PATCH /servers/:id`, `POST /servers/:id/reset-uptime`, and
-`DELETE /servers/:id`) require an admin session or the `x-admin-key` header. Configure the key in
+`DELETE /servers/:id`) require an admin session or the `x-admin-pin` header. Configure the six-digit PIN in
 the server-side `.env` file:
 
 ```dotenv
-ADMIN_KEY=replace-with-a-long-random-secret
+ADMIN_PIN=123456
 ```
 
-Copy `.env.example` to `.env`, replace the example with a long random secret,
+Copy `.env.example` to `.env`, replace the example with a six-digit PIN,
 and restart the API. The `.env` file is ignored by Git. Environment variables
 provided by the process still take precedence over values from `.env`. Do not
 put this key in the public dashboard or in client-side code.
@@ -52,7 +52,7 @@ Create a server with the title shown on the dashboard:
 ```sh
 curl -fsS -X POST \
   -H "Content-Type: application/json" \
-  -H "x-admin-key: $ADMIN_KEY" \
+  -H "x-admin-pin: $ADMIN_PIN" \
   -d '{"title":"Production API"}' \
   https://status.justparrot.me/servers
 ```
@@ -62,7 +62,7 @@ curl -fsS -X POST \
   ```sh
   curl -fsS -X PATCH \
     -H "Content-Type: application/json" \
-    -H "x-admin-key: $ADMIN_KEY" \
+    -H "x-admin-pin: $ADMIN_PIN" \
     -d '{"title":"Production API"}' \
     https://status.justparrot.me/servers/17
   ```
@@ -73,7 +73,7 @@ Reset server `17` and start a new uptime window:
 
 ```sh
 curl -fsS -X POST \
-  -H "x-admin-key: $ADMIN_KEY" \
+  -H "x-admin-pin: $ADMIN_PIN" \
   https://status.justparrot.me/servers/17/reset-uptime
 ```
 

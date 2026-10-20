@@ -28,9 +28,9 @@ app.get("/manage", (req, res) => {
 });
 
 app.post("/admin/login", (req, res) => {
-    const configured = process.env.ADMIN_KEY || "";
+    const configured = process.env.ADMIN_PIN || "";
     const provided = String(req.body.pin || "");
-    const valid = configured && provided.length === configured.length &&
+    const valid = /^\d{6}$/.test(configured) && provided.length === configured.length &&
         crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(configured));
     if (!valid) return res.status(401).json({ error: "Invalid PIN" });
     const session = createAdminSession();
