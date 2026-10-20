@@ -13,22 +13,24 @@
       --line: #263631;
       --panel: #101a17;
       --canvas: #08100e;
-      --green: #9cffbd;
-      --amber: #f7c873;
-      --red: #ff827d;
+      --deep-blue: #3c5c5d;
+      --pale-blue: #7aa6ae;
+      --green: #648a3d;
+      --amber: #b5a45f;
+      --red: #8d3431;
     }
 
     * { box-sizing: border-box; }
     body {
       margin: 0;
       color: var(--ink);
-      background: var(--canvas);
+      background: linear-gradient(135deg, var(--canvas) 0%, #10201f 55%, var(--deep-blue) 180%);
       font-family: "Space Grotesk", system-ui, sans-serif;
     }
     main { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 42px 0 64px; }
     header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 36px; }
     .brand { display: flex; align-items: center; gap: 13px; }
-    .mark { width: 14px; height: 14px; background: var(--green); box-shadow: 0 0 24px var(--green); transform: rotate(45deg); }
+    .mark { width: 14px; height: 14px; background: var(--green); box-shadow: 0 0 18px rgba(100,138,61,.45); transform: rotate(45deg); }
     h1 { margin: 0; font-size: clamp(2rem, 4vw, 3.6rem); letter-spacing: -.07em; line-height: .95; }
     .subhead { margin: 10px 0 0 27px; color: var(--muted); font-size: .9rem; }
     .refresh { color: var(--muted); font: 12px "DM Mono", monospace; text-align: right; }
@@ -56,10 +58,9 @@
     .server-row.health-yellow { border-left-color: var(--amber); }
     .server-row.health-red { border-left-color: var(--red); }
     .server-name { font-size: 1rem; font-weight: 600; }
-    .server-id { color: var(--muted); font: 11px "DM Mono", monospace; margin-top: 5px; }
     .status { display: flex; align-items: center; gap: 8px; font: 11px "DM Mono", monospace; text-transform: uppercase; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px var(--green); }
-    .offline .dot { background: var(--red); box-shadow: 0 0 12px var(--red); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px rgba(100,138,61,.7); }
+    .offline .dot { background: var(--red); box-shadow: 0 0 10px rgba(141,52,49,.7); }
     .bar { height: 5px; background: #24332f; overflow: hidden; }
     .bar i { display: block; height: 100%; background: var(--green); transition: width .5s ease; }
     .offline .bar i { background: var(--red); }
@@ -78,7 +79,6 @@
     .day:hover::before { content: attr(data-detail); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: max-content; max-width: 190px; padding: 7px 9px; color: var(--ink); background: #1b2924; border: 1px solid var(--line); font: 10px/1.45 "DM Mono", monospace; text-align: center; z-index: 2; }
     .day-axis { display: flex; justify-content: space-between; color: var(--muted); font: 10px "DM Mono", monospace; margin-top: 8px; }
     .empty, .error { color: var(--muted); padding: 30px 0; }
-    footer { color: var(--muted); font: 11px "DM Mono", monospace; margin-top: 25px; }
     @media (max-width: 700px) {
       main { width: min(100% - 26px, 560px); padding-top: 26px; }
       header { align-items: flex-start; flex-direction: column; padding-bottom: 26px; }
@@ -99,7 +99,7 @@
     <header>
       <div>
         <div class="brand"><span class="mark"></span><h1>Parrot Status</h1></div>
-        <p class="subhead">A quiet readout of what is alive.</p>
+        <p class="subhead">Server uptime</p>
       </div>
       <div class="refresh">LIVE MONITOR<strong id="updated">Connecting…</strong></div>
     </header>
@@ -110,10 +110,9 @@
       <div class="stat"><small>Latest pulse</small><b id="latest-pulse">—</b></div>
     </section>
     <section>
-      <div class="panel-head"><h2>Machines / uptime history</h2><span class="range" id="server-note">—</span></div>
-      <div class="servers" id="servers"><p class="empty">Listening for the fleet…</p></div>
+      <div class="panel-head"><h2>Servers</h2><span class="range" id="server-note">—</span></div>
+      <div class="servers" id="servers"><p class="empty">Loading…</p></div>
     </section>
-    <footer>Auto-refreshes every 30 seconds · status.justparrot.me</footer>
   </main>
   <script>
     const api = window.location.origin;
@@ -163,18 +162,18 @@
       $("server-count").textContent = servers.length;
       $("online-count").textContent = `${online}/${servers.length}`;
       $("fleet-uptime").textContent = formatPct(fleet);
-      $("server-note").textContent = `${online} responding now`;
+      $("server-note").textContent = `${online} online`;
       $("servers").innerHTML = servers.length ? servers.map(server => {
         const days = uptimeById[server.id] || [];
         const current = days.at(-1)?.uptime;
         const healthClass = current == null ? "" : current < 90 ? "health-red" : current < 98 ? "health-yellow" : "health-green";
         return `<article class="server-row ${server.status} ${healthClass}">
-          <div><div class="server-name">${escapeHtml(server.title || server.name)}</div><div class="server-id">ID ${server.id}</div></div>
+          <div><div class="server-name">${escapeHtml(server.title || server.name)}</div></div>
           <div class="uptime">${formatPct(current)}</div>
           <div class="status"><span class="dot"></span>${server.status}</div>
           ${drawGraph(days, server.title || server.name)}
         </article>`;
-      }).join("") : '<p class="empty">No machines registered yet.</p>';
+      }).join("") : '<p class="empty">No servers.</p>';
     }
     function escapeHtml(value) {
       return String(value).replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;" }[char]));
@@ -190,7 +189,7 @@
         $("updated").textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
       } catch (error) {
         $("updated").textContent = "Connection lost";
-        $("servers").innerHTML = `<p class="error">Could not read the fleet: ${escapeHtml(error.message)}</p>`;
+        $("servers").innerHTML = `<p class="error">Unable to load server data.</p>`;
       }
     }
     refresh();
